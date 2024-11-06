@@ -1,10 +1,13 @@
 use egui_macroquad::{egui::{DragValue, SidePanel, Slider}, macroquad::prelude::*};
 
-use crate::{controls::Controls, helper::{draw_rect, grow}};
+use crate::{controls::Controls, helper::{complex_pow, draw_rect, lerp}};
 
-pub struct Renderer {
+pub struct App {
     materials: Vec<(String, Material)>,
     current_material: usize,
+
+    controls_julia: Controls,
+    controls_mandelbrot: Controls,
 
     // sample path
     sample_mode: bool,
@@ -24,22 +27,25 @@ pub struct Renderer {
     pub power: f32,
 }
 
-impl Renderer {
+impl App {
     pub fn new() -> Self {
         let materials = vec![
             ("Orbit Traps".into(), load_material(
                 include_str!("shader/vertex.glsl"),
                 include_str!("shader/fragment.glsl"),
                 MaterialParams {
-                    uniforms: Renderer::uniforms_descriptor(),
+                    uniforms: App::uniforms_descriptor(),
                     ..Default::default()
                 },
             ).unwrap())
         ];
 
-        Renderer {
+        App {
             materials,
             current_material: 0,
+
+            controls_julia:      Controls::new(vec2( 0.0, 0.0), Rect { x: 0.5, y: 0.0, w: 0.5, h: 1.0 }),
+            controls_mandelbrot: Controls::new(vec2(-0.6, 0.0), Rect { x: 0.0, y: 0.0, w: 0.5, h: 1.0 }),
 
             sample_mode: false,
             sample_path_in_mandelbrot: true,
@@ -93,9 +99,9 @@ impl Renderer {
         material.set_uniform("isJulia", 1.0f32);
     }
 
-    pub fn update_uniforms(&mut self, controls_julia: &Controls, controls_mandelbrot: &Controls, bounds_mandelbrot: &Rect, bounds_julia: &Rect) {
-        let camera_j = controls_julia.camera();
-        let camera_m = controls_mandelbrot.camera();
+    pub fn update_uniforms(&mut self, bounds_mandelbrot: &Rect, bounds_julia: &Rect) {
+        let camera_j = self.controls_julia.camera();
+        let camera_m = self.controls_mandelbrot.camera();
 
         self.top_left_j = camera_j.screen_to_world(vec2(bounds_julia.left(), bounds_julia.top())).into();
         self.bottom_right_j = camera_j.screen_to_world(vec2(bounds_julia.right(), bounds_julia.bottom())).into();
@@ -106,20 +112,20 @@ impl Renderer {
         if is_mouse_button_down(MouseButton::Left) {
             if self.sample_mode {
                 if bounds_mandelbrot.contains(mouse_position().into()) {
-                    let p = controls_mandelbrot.mouse_world.into();
+                    let p = self.controls_mandelbrot.mouse_world.into();
                     self.sample_path_in_mandelbrot = true;
                     self.sample_path_start = p; 
                 }
 
                 else if bounds_julia.contains(mouse_position().into()) {
-                    let p = controls_julia.mouse_world.into();
+                    let p = self.controls_julia.mouse_world.into();
                     self.sample_path_in_mandelbrot = false;
                     self.sample_path_start = p;
                 }
             }
             else {
                 if bounds_mandelbrot.contains(mouse_position().into()) {
-                    self.picked = controls_mandelbrot.mouse_world.into();
+                    self.picked = self.controls_mandelbrot.mouse_world.into();
                 }
             }
 
@@ -137,6 +143,10 @@ impl Renderer {
                     ui.add(Slider::new(&mut self.iterations, 10..=1000).logarithmic(true));
     
                     ui.add_space(10.0);
+                    ui.label("Power:");
+                    ui.add(Slider::new(&mut self.power, -5.0..=5.0));
+    
+                    ui.add_space(10.0);
                     ui.label("Julia interpolation:");
                     ui.add(Slider::new(&mut self.julia_interpolation, 0.0..=1.0));
                 });
@@ -146,7 +156,7 @@ impl Renderer {
 
                     ui.add_space(10.0);
                     ui.label("Iterations:");
-                    ui.add(Slider::new(&mut self.iterations, 2..=50));
+                    ui.add(Slider::new(&mut self.sample_path_iterations, 2..=50));
 
                     ui.add_space(10.0);
                     ui.label("Sample in:");
@@ -167,6 +177,8 @@ impl Renderer {
                     });
                 });
 
+                ui.add_space(20.0);
+                
 
             });
             available_width = ctx.available_rect().width();
@@ -174,32 +186,76 @@ impl Renderer {
         available_width
     }
 
-    pub fn render(&mut self, controls_julia: &Controls, controls_mandelbrot: &Controls, bounds_mandelbrot: &Rect, bounds_julia: &Rect) {
-        gl_use_material(self.materials[self.current_material].1);
+    pub fn render(&mut self) {
+        let available_width = self.ui();
+        
+        let bounds_mandelbrot = Rect{ x: 0.0, y: 0.0, w: available_width*0.5, h: screen_height() };
+        let bounds_julia = Rect{ x: available_width*0.5, y: 0.0, w: available_width*0.5, h: screen_height() };
 
-        self.activate_mandelbrot();
-        draw_rect(bounds_mandelbrot, WHITE);
+        self.controls_julia.update(&bounds_julia);
+        self.controls_mandelbrot.update(&bounds_mandelbrot);
 
-        self.activate_julia();
-        draw_rect(bounds_julia, WHITE);
+        self.update_uniforms(&bounds_mandelbrot, &bounds_julia);
 
-        gl_use_default_material();
 
+        let rendering_material = self.materials[self.current_material].1;
+        
         if self.sample_mode {
-            let camera = if self.sample_path_in_mandelbrot {
-                controls_mandelbrot.camera()
+            if self.sample_path_in_mandelbrot {
+                gl_use_material(rendering_material);
+                self.activate_mandelbrot();
+                draw_rect(&bounds_mandelbrot, WHITE);
+                
+                gl_use_default_material();
+                self.draw_path(self.controls_mandelbrot.camera(), 0.0);
+
+                gl_use_material(rendering_material);
+                self.activate_julia();
+                draw_rect(&bounds_julia, WHITE);
             }
             else {
-                controls_julia.camera()
-            };
+                gl_use_material(rendering_material);
+                self.activate_julia();
+                draw_rect(&bounds_julia, WHITE);
 
-            let start = camera.world_to_screen(self.sample_path_start.into());
+                gl_use_default_material();
+                self.draw_path(self.controls_julia.camera(), self.julia_interpolation);
 
+                gl_use_material(rendering_material);
+                self.activate_mandelbrot();
+                draw_rect(&bounds_mandelbrot, WHITE);
+            }
         }
         else {
-            let picked = controls_mandelbrot.camera().world_to_screen(self.picked.into());
+            gl_use_material(rendering_material);
+            self.activate_mandelbrot();
+            draw_rect(&bounds_mandelbrot, WHITE);
+
+            self.activate_julia();
+            draw_rect(&bounds_julia, WHITE);
+
+            gl_use_default_material();
+            let picked = self.controls_mandelbrot.camera().world_to_screen(self.picked.into());
             draw_circle_lines(picked.x, picked.y, 5.0, 2.5, GRAY);
         }
         egui_macroquad::draw();
+    }
+
+    fn draw_path(&self, camera: &Camera2D, julia_interpolation: f32) {
+        let start = self.sample_path_start;
+
+        let mut c = start;
+        c = lerp(c, self.picked.into(), julia_interpolation); 
+        let mut z = start;
+
+        let mut prev_screen = camera.world_to_screen(z);
+        for _ in 0..self.sample_path_iterations {
+            z = complex_pow(z, self.power);
+            z += c;
+
+            let screen = camera.world_to_screen(z.into());
+            draw_line(prev_screen.x, prev_screen.y, screen.x, screen.y, 2.0, RED);
+            prev_screen = screen;
+        }
     }
 }

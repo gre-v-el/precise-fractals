@@ -23,7 +23,7 @@ pub fn draw_rect(rect: &Rect, color: Color) {
 	draw_rectangle(rect.x, rect.y, rect.w, rect.h, color);
 }
 
-pub fn complexPow(c: Vec2, power: f32) -> Vec2{
+pub fn complex_pow(c: Vec2, power: f32) -> Vec2{
 	let r = c.length_squared();
 	let mut theta = f32::atan2(c.y, c.x);
 
