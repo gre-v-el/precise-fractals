@@ -1,0 +1,7 @@
+[package]
+name = "precise-fractals"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+egui-macroquad = "0.15.0"
