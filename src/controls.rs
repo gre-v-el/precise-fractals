@@ -19,14 +19,8 @@ impl Controls {
 		let center = camera.screen_to_world(vec2(screen_width()*bounds.center().x, screen_height()*bounds.center().y));
 		camera.target -= center;
 
-		let target = Camera2D {
-			target: camera.target,
-			zoom: camera.zoom,
-			..Default::default()
-		};
-
 		Controls {
-			target,
+			target: camera.clone(),
 			camera,
 			mouse_world: vec2(0.0, 0.0),
 			last_mouse_world: vec2(0.0, 0.0),
@@ -75,5 +69,9 @@ impl Controls {
 
 	pub fn camera(&self) -> &Camera2D {
 		&self.camera
+	}
+
+	pub fn set_camera(&mut self, camera: Camera2D) {
+		self.target = camera;
 	}
 }
