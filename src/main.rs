@@ -1,6 +1,7 @@
 use egui_macroquad::{macroquad, macroquad::prelude::*};
 use app::App;
 
+mod materials;
 mod controls;
 mod helper;
 mod app;

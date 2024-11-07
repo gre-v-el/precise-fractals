@@ -5,3 +5,5 @@ edition = "2021"
 
 [dependencies]
 egui-macroquad = "0.15.0"
+ron = "0.8"
+serde = { version = "1", features = ["derive"] }

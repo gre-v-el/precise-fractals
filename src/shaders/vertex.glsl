@@ -11,7 +11,5 @@ uniform mat4 Projection;
 
 void main() {
 	UV = mix(topLeft, bottomRight, texcoord);
-
-	// gl_Position = vec4(position.x + xDisplacement, position.y, 0, 1.0);
 	gl_Position = Projection * Model * vec4(position.xy, 0.0, 1.0);
 }

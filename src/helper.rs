@@ -10,15 +10,6 @@ where
 	t * b + (1.0 - t) * a
 }
 
-pub fn grow(rect: &Rect, amount: f32) -> Rect {
-	Rect {
-		x: rect.x - amount,
-		y: rect.y - amount,
-		w: rect.w + 2.0*amount,
-		h: rect.h + 2.0*amount,
-	}
-}
-
 pub fn draw_rect(rect: &Rect, color: Color) {
 	draw_rectangle(rect.x, rect.y, rect.w, rect.h, color);
 }

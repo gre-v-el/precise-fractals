@@ -1,0 +1,10 @@
+(
+    vertex_shader: "./src/shaders/vertex.glsl",
+    fragments: [
+        ("Plain B/W", "./src/shaders/fragments/plain.glsl"),
+        ("Pickover Stalks", "./src/shaders/fragments/pickover.glsl"),
+    ],
+    includes: [
+        ("$include_lib", "./src/shaders/common.glsl"),
+    ]
+)

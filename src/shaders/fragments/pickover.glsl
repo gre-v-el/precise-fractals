@@ -1,35 +1,13 @@
-// per frame variables
 uniform vec2 picked; 
 uniform float juliaInterpolation;
-uniform bool isJulia;
 uniform int iterations;
 uniform float power;
-uniform vec2 topLeft;
-uniform vec2 bottomRight;
 
-// per pixel variables
 varying vec2 UV;
 
-float distSq(vec2 a, vec2 b){
-	return (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y); 
-}
-float distSq(vec2 a){
-	return a.x * a.x + a.y * a.y; 
-}
-
-vec2 complexPow(vec2 c, float power){
-	float r = distSq(c);
-	float theta = atan(c.y, c.x);
-
-	r = pow(r, power/2.);
-	theta *= power;
-
-	return vec2(r*cos(theta), r*sin(theta));
-}
+$include_lib
 
 void main() { 
-	// define initial numbers
-	// juliaInt == 0: mandelbrot | juliaInt == 1: julia | inbetween gives different results
 	vec2 c = UV;
 	c = mix(c, picked, juliaInterpolation); 
 	vec2 z = UV;
