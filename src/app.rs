@@ -1,4 +1,4 @@
-use egui_macroquad::{egui::{DragValue, SidePanel, Slider}, macroquad::prelude::*};
+use egui_macroquad::{egui::{ComboBox, DragValue, SidePanel, Slider}, macroquad::prelude::*};
 
 use crate::{controls::Controls, helper::{complex_pow, draw_rect, lerp}, materials::Materials};
 
@@ -132,6 +132,16 @@ impl App {
                     self.controls_julia.set_camera(new_camera);
                 }
 
+                ui.add_space(10.0);
+                ui.label("Shader:");
+                ComboBox::new("Materials:", "")
+                    .selected_text(self.materials.current_name())
+                    .show_ui(ui, |ui| {
+                        for (i, (name, _)) in self.materials.materials.iter().enumerate() {
+                            ui.selectable_value(&mut self.materials.current_material, i, name);
+                        }
+                    });
+
             });
             available_width = ctx.available_rect().width();
         });
@@ -174,21 +184,22 @@ impl App {
                 self.materials.activate_mandelbrot();
                 draw_rect(&self.bounds_mandelbrot, WHITE);
             }
-            gl_use_default_material();
         }
         else {
             self.materials.use_current();
             self.materials.activate_mandelbrot();
             draw_rect(&self.bounds_mandelbrot, WHITE);
 
-            self.materials.activate_julia();
-            draw_rect(&self.bounds_julia, WHITE);
-
             gl_use_default_material();
             let picked = self.controls_mandelbrot.camera().world_to_screen(self.materials.picked.into());
             draw_circle_lines(picked.x, picked.y, 5.0, 2.5, GRAY);
+
+            self.materials.use_current();
+            self.materials.activate_julia();
+            draw_rect(&self.bounds_julia, WHITE);
         }
 
+        gl_use_default_material();
         draw_rectangle(self.bounds_mandelbrot.right()-2.0, self.bounds_mandelbrot.y, 4.0, self.bounds_mandelbrot.h, color_u8!(30, 30, 30, 255));
         egui_macroquad::draw();
     }

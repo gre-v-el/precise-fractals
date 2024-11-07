@@ -11,8 +11,8 @@ struct MaterialsDescriptor {
 }
 
 pub struct Materials {
-    materials: Vec<(String, Material)>,
-    current_material: usize,
+    pub materials: Vec<(String, Material)>,
+    pub current_material: usize,
 
     // uniforms
     pub top_left_m: [f32; 2],
@@ -97,6 +97,10 @@ impl Materials {
 
     pub fn use_current(&self) {
         gl_use_material(self.materials[self.current_material].1);
+    }
+
+    pub fn current_name(&self) -> &str {
+        &self.materials[self.current_material].0
     }
 
     pub fn activate_mandelbrot(&mut self) {
